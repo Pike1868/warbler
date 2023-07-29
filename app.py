@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
-from forms import UserAddForm, LoginForm, MessageForm
+from forms import UserAddForm, LoginForm, MessageForm, EditUserForm
 from models import db, connect_db, User, Message
 import pdb
 
@@ -113,6 +113,7 @@ def login():
 @app.route('/logout')
 def logout():
     """Handle logout of user."""
+    # IMPLEMENT THIS
     
     do_logout()
     flash("Logout successful, goodbye!", 'success')
@@ -214,8 +215,29 @@ def stop_following(follow_id):
 @app.route('/users/profile', methods=["GET", "POST"])
 def profile():
     """Update profile for current user."""
-
     # IMPLEMENT THIS
+    # Should I change this route to /users/<int:user_id>/edit? I think this should be another route
+    form = EditUserForm()
+    
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            user = User.authenticate(g.user.username,
+                                 form.password.data)
+            if user:
+                user.username = form.username.data
+                user.email = form.email.data
+                user.image_url = form.image_url.data
+                user.bio = form.bio.data
+                user.location = form.location.data
+                
+                db.session.add(user)
+                db.session.commit()
+                
+                return redirect("/users/profile")
+            else:
+                flash("Password is incorrect", "danger")           
+    
+    return render_template("/users/edit.html", user = g.user, form = form)
 
 
 @app.route('/users/delete', methods=["POST"])
