@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, render_template, request, flash, redirect, session, g
+from flask import Flask, render_template, request, flash, redirect, session, g, url_for
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
@@ -84,7 +84,7 @@ def signup():
 
         do_login(user)
 
-        return redirect("/")
+        return redirect(url_for("homepage"))
 
     else:
         return render_template('users/signup.html', form=form)
@@ -103,7 +103,7 @@ def login():
         if user:
             do_login(user)
             flash(f"Hello, {user.username}!", "success")
-            return redirect("/")
+            return redirect(url_for("homepage"))
 
         flash("Invalid credentials.", 'danger')
 
@@ -118,7 +118,7 @@ def logout():
     do_logout()
     flash("Logout successful, goodbye!", 'success')
 
-    return redirect("/login")
+    return redirect(url_for("login"))
 
 
 ##############################################################################
@@ -164,7 +164,7 @@ def show_following(user_id):
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect(url_for("homepage"))
 
     user = User.query.get_or_404(user_id)
     return render_template('users/following.html', user=user)
@@ -176,7 +176,7 @@ def users_followers(user_id):
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect(url_for("homepage"))
 
     user = User.query.get_or_404(user_id)
     return render_template('users/followers.html', user=user)
@@ -188,7 +188,7 @@ def add_follow(follow_id):
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect(url_for("homepage"))
 
     followed_user = User.query.get_or_404(follow_id)
     g.user.following.append(followed_user)
@@ -203,7 +203,7 @@ def stop_following(follow_id):
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect(url_for("homepage"))
 
     followed_user = User.query.get(follow_id)
     g.user.following.remove(followed_user)
@@ -216,7 +216,11 @@ def stop_following(follow_id):
 def profile():
     """Update profile for current user."""
     # IMPLEMENT THIS
-    # Should I change this route to /users/<int:user_id>/edit? I think this should be another route
+    
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect(url_for("homepage"))
+    
     form = EditUserForm()
     
     if request.method == 'POST':
@@ -233,9 +237,10 @@ def profile():
                 db.session.add(user)
                 db.session.commit()
                 
-                return redirect("/users/profile")
+                return redirect(f"/users/{g.user.id}")
             else:
-                flash("Password is incorrect", "danger")           
+                flash("Incorrect password, profile was not updated.", "danger")
+                return redirect( url_for("homepage"))           
     
     return render_template("/users/edit.html", user = g.user, form = form)
 
@@ -316,13 +321,13 @@ def homepage():
     - anon users: no messages
     - logged in: 100 most recent messages of followed_users
     """
-
+    # STEP 6: FIX HOMEPAGE 
+    
     if g.user:
-        messages = (Message
-                    .query
-                    .order_by(Message.timestamp.desc())
-                    .limit(100)
-                    .all())
+        messages = g.user.get_followed_user_messages()
+        
+        if not messages:
+            flash("Messages from people you are following will show up here, use the search bar to find some people to follow!", 'info')
 
         return render_template('home.html', messages=messages)
 
