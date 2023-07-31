@@ -4,6 +4,7 @@ from datetime import datetime
 
 from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import desc
 
 bcrypt = Bcrypt()
 db = SQLAlchemy()
@@ -129,7 +130,16 @@ class User(db.Model):
 
         found_user_list = [user for user in self.following if user == other_user]
         return len(found_user_list) == 1
+  
+    def get_followed_user_messages(self):
+        """Return the latest 100 messages from users that this user is following"""
 
+        followed_user_ids = [user.id for user in self.following]
+        
+        if not followed_user_ids:
+            return []
+        return (db.session.query(Message).filter(Message.user_id.in_(followed_user_ids)).order_by(desc(Message.timestamp)).limit(100).all())
+    
     @classmethod
     def signup(cls, username, email, password, image_url):
         """Sign up user.
