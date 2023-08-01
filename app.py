@@ -5,7 +5,7 @@ from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
 from forms import UserAddForm, LoginForm, MessageForm, EditUserForm
-from models import db, connect_db, User, Message
+from models import db, connect_db, User, Message, Likes
 import pdb
 
 CURR_USER_KEY = "curr_user"
@@ -233,6 +233,7 @@ def profile():
                 user.image_url = form.image_url.data
                 user.bio = form.bio.data
                 user.location = form.location.data
+                user.header_image_url = form.header_image_url.data
                 
                 db.session.add(user)
                 db.session.commit()
@@ -240,7 +241,7 @@ def profile():
                 return redirect(f"/users/{g.user.id}")
             else:
                 flash("Incorrect password, profile was not updated.", "danger")
-                return redirect( url_for("homepage"))           
+                return redirect( url_for("homepage"))   
     
     return render_template("/users/edit.html", user = g.user, form = form)
 
@@ -251,17 +252,29 @@ def delete_user():
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect(url_for("homepage"))
 
     do_logout()
 
     db.session.delete(g.user)
     db.session.commit()
 
-    return redirect("/signup")
+    return redirect(url_for("signup"))
 
+@app.route('/users/<int:user_id>/likes')
+def user_likes(user_id):
+    """ Show list of likes for this user. """
 
-##############################################################################
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect(url_for("homepage"))
+
+    user = User.query.get_or_404(user_id)
+    sorted_likes = user.sort_liked_messages()
+    
+    return render_template('/users/likes.html',user=user, sorted_likes=sorted_likes)
+
+###################################################################
 # Messages routes:
 
 @app.route('/messages/new', methods=["GET", "POST"])
@@ -273,7 +286,7 @@ def messages_add():
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect(url_for("homepage"))
 
     form = MessageForm()
 
@@ -301,13 +314,37 @@ def messages_destroy(message_id):
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect(url_for("homepage"))
 
     msg = Message.query.get(message_id)
     db.session.delete(msg)
     db.session.commit()
 
     return redirect(f"/users/{g.user.id}")
+
+
+@app.route("/users/add_like/<int:msg_id>", methods=["POST"])
+def add_message_to_likes(msg_id):
+    """Add message id and user id to Likes table"""
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect(url_for("homepage"))
+    
+    liked_msg = Likes.query.filter_by(user_id=g.user.id, message_id=msg_id).first()
+    
+    if liked_msg:
+        # unlike if message was already liked
+        db.session.delete(liked_msg)
+        db.session.commit() 
+        flash("Message has been removed from likes", "success")
+        
+    else:
+        liked_msg = Likes(user_id=g.user.id, message_id = msg_id)
+        db.session.add(liked_msg)
+        db.session.commit()
+        flash("Message added to likes", "success")
+     
+    return  redirect(url_for("homepage"))
 
 
 ##############################################################################
@@ -325,11 +362,14 @@ def homepage():
     
     if g.user:
         messages = g.user.get_followed_user_messages()
+        likes = [like.id for like in g.user.likes]
         
         if not messages:
             flash("Messages from people you are following will show up here, use the search bar to find some people to follow!", 'info')
+            
+        
 
-        return render_template('home.html', messages=messages)
+        return render_template('home.html', messages=messages, likes=likes)
 
     else:
         return render_template('home-anon.html')

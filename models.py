@@ -31,7 +31,10 @@ class Follows(db.Model):
 class Likes(db.Model):
     """Mapping user likes to warbles."""
 
-    __tablename__ = 'likes' 
+    __tablename__ = 'likes'
+    
+    __table_args__ = (db.UniqueConstraint('user_id', 'message_id', name='uq_user_message'),)
+
 
     id = db.Column(
         db.Integer,
@@ -45,8 +48,7 @@ class Likes(db.Model):
 
     message_id = db.Column(
         db.Integer,
-        db.ForeignKey('messages.id', ondelete='cascade'),
-        unique=True
+        db.ForeignKey('messages.id', ondelete='cascade')
     )
 
 
@@ -132,13 +134,19 @@ class User(db.Model):
         return len(found_user_list) == 1
   
     def get_followed_user_messages(self):
-        """Return the latest 100 messages from users that this user is following"""
+        """Return the latest 100 messages from users that the current user is following"""
 
         followed_user_ids = [user.id for user in self.following]
         
         if not followed_user_ids:
             return []
-        return (db.session.query(Message).filter(Message.user_id.in_(followed_user_ids)).order_by(desc(Message.timestamp)).limit(100).all())
+        return Message.query.filter(Message.user_id.in_(followed_user_ids)).order_by(desc(Message.timestamp)).limit(100).all()
+    
+    def sort_liked_messages(self):
+        """Return a list of the current user's liked messages (warbles)"""
+        
+        return Message.query.filter(Message.id.in_([msg.id for msg in self.likes])).order_by(Message.timestamp.desc()).all()
+
     
     @classmethod
     def signup(cls, username, email, password, image_url):
