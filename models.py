@@ -31,8 +31,9 @@ class Follows(db.Model):
 class Likes(db.Model):
     """Mapping user likes to warbles."""
 
-    __tablename__ = 'likes' 
-
+    __tablename__ = 'likes'
+    __table_args__ = (db.UniqueConstraint('user_id', 'message_id', name='uq_user_message'),)
+    
     id = db.Column(
         db.Integer,
         primary_key=True
@@ -45,8 +46,7 @@ class Likes(db.Model):
 
     message_id = db.Column(
         db.Integer,
-        db.ForeignKey('messages.id', ondelete='cascade'),
-        unique=True
+        db.ForeignKey('messages.id', ondelete='cascade')
     )
 
 
@@ -122,24 +122,26 @@ class User(db.Model):
     def is_followed_by(self, other_user):
         """Is this user followed by `other_user`?"""
 
-        found_user_list = [user for user in self.followers if user == other_user]
+        found_user_list = [
+            user for user in self.followers if user == other_user]
         return len(found_user_list) == 1
 
     def is_following(self, other_user):
         """Is this user following `other_use`?"""
 
-        found_user_list = [user for user in self.following if user == other_user]
+        found_user_list = [
+            user for user in self.following if user == other_user]
         return len(found_user_list) == 1
-  
+
     def get_followed_user_messages(self):
         """Return the latest 100 messages from users that this user is following"""
 
         followed_user_ids = [user.id for user in self.following]
-        
+
         if not followed_user_ids:
             return []
         return (db.session.query(Message).filter(Message.user_id.in_(followed_user_ids)).order_by(desc(Message.timestamp)).limit(100).all())
-    
+
     @classmethod
     def signup(cls, username, email, password, image_url):
         """Sign up user.

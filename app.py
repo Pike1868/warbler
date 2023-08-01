@@ -33,7 +33,7 @@ connect_db(app)
 @app.before_request
 def add_user_to_g():
     """If we're logged in, add curr user to Flask global."""
-   
+
     if CURR_USER_KEY in session:
         g.user = User.query.get(session[CURR_USER_KEY])
 
@@ -114,7 +114,7 @@ def login():
 def logout():
     """Handle logout of user."""
     # IMPLEMENT THIS
-    
+
     do_logout()
     flash("Logout successful, goodbye!", 'success')
 
@@ -216,33 +216,33 @@ def stop_following(follow_id):
 def profile():
     """Update profile for current user."""
     # IMPLEMENT THIS
-    
+
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect(url_for("homepage"))
-    
+
     form = EditUserForm()
-    
+
     if request.method == 'POST':
         if form.validate_on_submit():
             user = User.authenticate(g.user.username,
-                                 form.password.data)
+                                     form.password.data)
             if user:
                 user.username = form.username.data
                 user.email = form.email.data
                 user.image_url = form.image_url.data
                 user.bio = form.bio.data
                 user.location = form.location.data
-                
+
                 db.session.add(user)
                 db.session.commit()
-                
+
                 return redirect(f"/users/{g.user.id}")
             else:
                 flash("Incorrect password, profile was not updated.", "danger")
-                return redirect( url_for("homepage"))           
-    
-    return render_template("/users/edit.html", user = g.user, form = form)
+                return redirect(url_for("homepage"))
+
+    return render_template("/users/edit.html", user=g.user, form=form)
 
 
 @app.route('/users/delete', methods=["POST"])
@@ -321,11 +321,11 @@ def homepage():
     - anon users: no messages
     - logged in: 100 most recent messages of followed_users
     """
-    # STEP 6: FIX HOMEPAGE 
-    
+    # STEP 6: FIX HOMEPAGE
+
     if g.user:
         messages = g.user.get_followed_user_messages()
-        
+
         if not messages:
             flash("Messages from people you are following will show up here, use the search bar to find some people to follow!", 'info')
 
