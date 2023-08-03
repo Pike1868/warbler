@@ -33,7 +33,7 @@ connect_db(app)
 @app.before_request
 def add_user_to_g():
     """If we're logged in, add curr user to Flask global."""
-   
+
     if CURR_USER_KEY in session:
         g.user = User.query.get(session[CURR_USER_KEY])
 
@@ -114,7 +114,6 @@ def login():
 def logout():
     """Handle logout of user."""
     # IMPLEMENT THIS
-    
     do_logout()
     flash("Logout successful, goodbye!", 'success')
 
@@ -214,36 +213,40 @@ def stop_following(follow_id):
 
 @app.route('/users/profile', methods=["GET", "POST"])
 def profile():
-    """Update profile for current user."""
+    """GET- user profile edit form, POST - Update profile for current user."""
     # IMPLEMENT THIS
-    
+
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect(url_for("homepage"))
-    
+
     form = EditUserForm()
-    
+
     if request.method == 'POST':
+
         if form.validate_on_submit():
-            user = User.authenticate(g.user.username,
-                                 form.password.data)
-            if user:
+
+            if User.check_password(g.user, form.password.data):
+
+                user = g.user
                 user.username = form.username.data
                 user.email = form.email.data
                 user.image_url = form.image_url.data
                 user.bio = form.bio.data
                 user.location = form.location.data
                 user.header_image_url = form.header_image_url.data
-                
+
                 db.session.add(user)
                 db.session.commit()
-                
+
                 return redirect(f"/users/{g.user.id}")
             else:
                 flash("Incorrect password, profile was not updated.", "danger")
-                return redirect( url_for("homepage"))   
-    
-    return render_template("/users/edit.html", user = g.user, form = form)
+                return redirect(url_for("homepage"))
+
+        else:
+            print(form.errors)
+    return render_template("/users/edit.html", user=g.user, form=form)
 
 
 @app.route('/users/delete', methods=["POST"])
@@ -261,6 +264,7 @@ def delete_user():
 
     return redirect(url_for("signup"))
 
+
 @app.route('/users/<int:user_id>/likes')
 def user_likes(user_id):
     """ Show list of likes for this user. """
@@ -271,17 +275,18 @@ def user_likes(user_id):
 
     user = User.query.get_or_404(user_id)
     sorted_likes = user.sort_liked_messages()
-    
-    return render_template('/users/likes.html',user=user, sorted_likes=sorted_likes)
+
+    return render_template('/users/likes.html', user=user, sorted_likes=sorted_likes)
 
 ###################################################################
 # Messages routes:
+
 
 @app.route('/messages/new', methods=["GET", "POST"])
 def messages_add():
     """Add a message:
 
-    Show form if GET. If valid, update message and redirect to user page.
+    Show form if GET. If valid, create message and redirect to user page.
     """
 
     if not g.user:
@@ -317,6 +322,11 @@ def messages_destroy(message_id):
         return redirect(url_for("homepage"))
 
     msg = Message.query.get(message_id)
+
+    if msg.user_id != g.user.id:
+        flash("Access unauthorized.", "danger")
+        return redirect(url_for("homepage"))
+
     db.session.delete(msg)
     db.session.commit()
 
@@ -329,22 +339,23 @@ def add_message_to_likes(msg_id):
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect(url_for("homepage"))
-    
-    liked_msg = Likes.query.filter_by(user_id=g.user.id, message_id=msg_id).first()
-    
+
+    liked_msg = Likes.query.filter_by(
+        user_id=g.user.id, message_id=msg_id).first()
+
     if liked_msg:
         # unlike if message was already liked
         db.session.delete(liked_msg)
-        db.session.commit() 
+        db.session.commit()
         flash("Message has been removed from likes", "success")
-        
+
     else:
-        liked_msg = Likes(user_id=g.user.id, message_id = msg_id)
+        liked_msg = Likes(user_id=g.user.id, message_id=msg_id)
         db.session.add(liked_msg)
         db.session.commit()
         flash("Message added to likes", "success")
-     
-    return  redirect(url_for("homepage"))
+
+    return redirect(url_for("homepage"))
 
 
 ##############################################################################
@@ -358,16 +369,14 @@ def homepage():
     - anon users: no messages
     - logged in: 100 most recent messages of followed_users
     """
-    # STEP 6: FIX HOMEPAGE 
-    
+    # STEP 6: FIX HOMEPAGE
+
     if g.user:
         messages = g.user.get_followed_user_messages()
         likes = [like.id for like in g.user.likes]
-        
+
         if not messages:
             flash("Messages from people you are following will show up here, use the search bar to find some people to follow!", 'info')
-            
-        
 
         return render_template('home.html', messages=messages, likes=likes)
 
