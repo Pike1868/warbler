@@ -5,7 +5,9 @@ from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
 from forms import UserAddForm, LoginForm, MessageForm, EditUserForm
+
 from models import db, connect_db, User, Message, Likes
+
 import pdb
 
 CURR_USER_KEY = "curr_user"
@@ -119,6 +121,11 @@ def logout():
 
     return redirect(url_for("login"))
 
+    do_logout()
+    flash("Logout successful, goodbye!", 'success')
+
+    return redirect(url_for("login"))
+
 
 ##############################################################################
 # General user routes:
@@ -213,7 +220,9 @@ def stop_following(follow_id):
 
 @app.route('/users/profile', methods=["GET", "POST"])
 def profile():
+
     """GET- user profile edit form, POST - Update profile for current user."""
+
     # IMPLEMENT THIS
 
     if not g.user:
@@ -229,12 +238,15 @@ def profile():
             if User.check_password(g.user, form.password.data):
 
                 user = g.user
+
                 user.username = form.username.data
                 user.email = form.email.data
                 user.image_url = form.image_url.data
                 user.bio = form.bio.data
                 user.location = form.location.data
+
                 user.header_image_url = form.header_image_url.data
+
 
                 db.session.add(user)
                 db.session.commit()
@@ -244,8 +256,7 @@ def profile():
                 flash("Incorrect password, profile was not updated.", "danger")
                 return redirect(url_for("homepage"))
 
-        else:
-            print(form.errors)
+
     return render_template("/users/edit.html", user=g.user, form=form)
 
 
@@ -373,7 +384,9 @@ def homepage():
 
     if g.user:
         messages = g.user.get_followed_user_messages()
+
         likes = [like.id for like in g.user.likes]
+
 
         if not messages:
             flash("Messages from people you are following will show up here, use the search bar to find some people to follow!", 'info')

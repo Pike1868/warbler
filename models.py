@@ -33,6 +33,7 @@ class Likes(db.Model):
 
     __tablename__ = 'likes'
 
+
     __table_args__ = (db.UniqueConstraint(
         'user_id', 'message_id', name='uq_user_message'),)
 
@@ -136,12 +137,15 @@ class User(db.Model):
         return len(found_user_list) == 1
 
     def get_followed_user_messages(self):
+
         """Return the latest 100 messages from users that the current user is following"""
+
 
         followed_user_ids = [user.id for user in self.following]
 
         if not followed_user_ids:
             return []
+
         return Message.query.filter(Message.user_id.in_(followed_user_ids)).order_by(desc(Message.timestamp)).limit(100).all()
 
     def sort_liked_messages(self):
@@ -153,6 +157,7 @@ class User(db.Model):
         """Check the provided password against the stored hashed password."""
 
         return bcrypt.check_password_hash(self.password, password)
+
 
     @classmethod
     def signup(cls, username, email, password, image_url):
