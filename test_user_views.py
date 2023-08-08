@@ -120,7 +120,7 @@ class UserViewTestCase(TestCase):
         self.assertEqual(users_before + 1, users_after)
 
     def test_logged_in_user_homepage(self):
-        """Testing if homepage for a logged in user appears and displays warbles of followed users or a flash message to follow users"""
+        """Testing homepage for a logged in user appears and displays warbles of followed users or a flash message to follow users"""
 
         with self.client.session_transaction() as sess:
             sess[CURR_USER_KEY] = self.testuser.id
@@ -187,13 +187,15 @@ class UserViewTestCase(TestCase):
         self.assertEqual(resp.status_code, 302)
 
     def test_visitor_cannot_see_following_pages(self):
-        """ If no user is logged in, visitor should not be able to see following page for any user, and should be redirected
+        """ If no user is logged in, visitor should not be able to see following page for any user, should be redirected and shown a warning
         """
 
-        resp = self.client.get(f"/users/{self.testuser_id}/following")
+        resp = self.client.get(
+            f"/users/{self.testuser_id}/following", follow_redirects=True)
         html = resp.get_data(as_text=True)
 
-        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('Access unauthorized', html)
 
     def test_logged_in_user_can_follow_other_users(self):
         """Testing that the logged in user can follow other users"""
@@ -303,8 +305,7 @@ class UserViewTestCase(TestCase):
         self.assertEqual(resp.status_code, 200)
 
         user = User.query.get(self.testuser_id)
-        print(user.username, user.email, user.image_url,
-              user.bio, user.location, user.header_image_url)
+
         self.assertIsNot(user.username, "testuser_updated")
         self.assertEqual(user.email, "test@updated.com")
         self.assertEqual(user.image_url, "/static/images/default-pic.png")

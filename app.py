@@ -22,7 +22,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
 app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 toolbar = DebugToolbarExtension(app)
 
 connect_db(app)
@@ -116,11 +116,6 @@ def login():
 def logout():
     """Handle logout of user."""
     # IMPLEMENT THIS
-    do_logout()
-    flash("Logout successful, goodbye!", 'success')
-
-    return redirect(url_for("login"))
-
     do_logout()
     flash("Logout successful, goodbye!", 'success')
 
@@ -220,7 +215,6 @@ def stop_following(follow_id):
 
 @app.route('/users/profile', methods=["GET", "POST"])
 def profile():
-
     """GET- user profile edit form, POST - Update profile for current user."""
 
     # IMPLEMENT THIS
@@ -247,7 +241,6 @@ def profile():
 
                 user.header_image_url = form.header_image_url.data
 
-
                 db.session.add(user)
                 db.session.commit()
 
@@ -255,7 +248,6 @@ def profile():
             else:
                 flash("Incorrect password, profile was not updated.", "danger")
                 return redirect(url_for("homepage"))
-
 
     return render_template("/users/edit.html", user=g.user, form=form)
 
@@ -386,7 +378,6 @@ def homepage():
         messages = g.user.get_followed_user_messages()
 
         likes = [like.id for like in g.user.likes]
-
 
         if not messages:
             flash("Messages from people you are following will show up here, use the search bar to find some people to follow!", 'info')
